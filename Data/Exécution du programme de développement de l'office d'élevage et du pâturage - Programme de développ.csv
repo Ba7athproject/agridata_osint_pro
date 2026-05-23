@@ -1,0 +1,41 @@
+﻿_id,Annee,Programme,Unite,Realisations,%_realisations
+1,2023,Amélioration des parcours et développement des ressources fourragères et pastorales ,,,
+2,2023,*Programme de développement des plantations fourragères,,,
+3,2023,Superficies des parcelles démonstratives pour saison d'automne,ha,4.58,46
+4,2023,Production (saison automne),T,_,_
+5,2023,Superficies des parcelles démonstratives pour saison de printemps,ha,5.65,113
+6,2023,Production (saison printemps),T,636,159
+7,2023,Amélioration des races,,,
+8,2023,*Programme de numérotage d'animaux,,,
+9,2023,Bovins,Tête,8175,91
+10,2023,Petits ruminants,Tête,1200,34
+11,2023,Camélidés,Tête,42,84
+12,2023,*Programme de contrôle de productivité ,,,
+13,2023,Laits (bovins),Vache,610,76
+14,2023,Croissance chez les petits ruminants ,Tête,2438,49
+15,2023,*Analyse des échantillons de lait,Echantillon,3638,66
+16,2023,*Nombre des rapports délivrés aux bénéficiaires,Rapport,76,63
+17,2023,Programme de reproduction,,,
+18,2023,Nombre de premières doses de vaccination des bovins,Vaccination,4926,70
+19,2023,Totaux des doses de vaccination des bovins,Vaccination,6746,75
+20,2023,* Programme d'appui de petits et moyens éleveurs de bovins,,,
+21,2023,Nombre d'éleveurs encadrés,Eléveurs,3,60
+22,2023,Nombre de vaches laitières,Vache,86,61
+23,2023,* Programme d'appui et d'encadrement de petits et moyens éleveurs de bovins,,,
+24,2023,Nombre de ferme,Ferme,10,100
+25,2023,Nombre de vaches présentes,Vache,530,96
+26,2023,* Programme National du réseau de collecte du lait,,,
+27,2023,Nombre de centre du réseau de collecte,Centre,16,100
+28,2023,Quantité de lait collecté,1000 L,39921,89
+29,2023,Quantité de lait transformé,1001 L,38718,88
+30,2023,Programme d'appui du filière viande,,,
+31,2023,Appui et encadrement intensifié des étables d'engraissement de veaux,,,
+32,2023,Nombre d'étables d'engraissement suivis,Etable,92,115
+33,2023,Nombre de veaux engraissés,Veau,4821,96
+34,2023,Programme d'appui d'élevage d'ovins et de caprins et de camelins,,,
+35,2023,*Programme d'appui des ovins,,,
+36,2023,Nombre de ferme encadré,Ferme,10,125
+37,2023,Nombre de troupeau,Troupeau,24,100
+38,2023,Nombre de tête encadré,Femelle,5239,95
+39,2023,*Surveillance du filière des petits animaux,,,
+40,2023,Nombre de tête de lapin surveillé,Lapine,898,30

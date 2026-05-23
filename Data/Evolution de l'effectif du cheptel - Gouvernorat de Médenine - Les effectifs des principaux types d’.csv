@@ -1,0 +1,7 @@
+﻿_id,Annee,Delegation,Effectif_bovin_en_tete,Effectif_ovin_en_tete,Effectif_caprin_en_tete,Effectif_camelides_en_tete,nombre_des ruches_d'abeille,Nombre_des_unites_des_poules_pondeuses,Nombre des unite sdes poulets de chair,Nombre_des_clapiers,nombre_des_lapines_reproductrices
+1,2022,Médenine Sud,56,27000,6250,,200,0,20000,2,240
+7,2022,Médenine Nord,265,28500,5000,100,300,3000,50000,,320
+10,2023,Médenine Sud,56,27000,6250,,200,0,20000,2,240
+16,2023,Médenine Nord,64,28500,5000,100,300,3000,50000,,320
+19,2024,Médenine Nord,56,27000,6250,-,200,0,20000,2,240
+20,2024,Médenine Sud,0,45000,15100,250,400,0,20000,1,100
