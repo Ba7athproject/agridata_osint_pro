@@ -6,6 +6,7 @@ import pandas as pd
 import threading
 import os
 import re
+import time 
 
 # Configuration de l'apparence professionnelle
 ctk.set_appearance_mode("Dark")
@@ -16,11 +17,11 @@ class AgridataProApp(ctk.CTk):
         super().__init__()
 
         self.title("Agridata OSINT Explorer - Projet Ba7ath")
-        self.geometry("1000x750") # Légèrement agrandi pour le nouveau bouton
+        self.geometry("1000x750")
         self.minsize(900, 700)
 
         self.selected_resource_id = None
-        self.current_search_results = [] # Stocke tous les résultats de la recherche courante
+        self.current_search_results = [] 
         self.api_base_url = "https://catalog.agridata.tn/fr/api/3/action"
         
         # Liste exhaustive des gouvernorats pour l'investigation régionale
@@ -89,7 +90,7 @@ class AgridataProApp(ctk.CTk):
         # NOUVEAU : Bouton Télécharger TOUT (Lot)
         self.btn_download_all = ctk.CTkButton(self.sidebar, text="📥 Télécharger TOUT (Lot)", 
                                               font=ctk.CTkFont(weight="bold"),
-                                              fg_color="#8e44ad", hover_color="#9b59b6", # Couleur violette pour distinguer l'action de masse
+                                              fg_color="#8e44ad", hover_color="#9b59b6", 
                                               state="disabled", command=self.start_batch_extraction)
         self.btn_download_all.pack(pady=15, padx=20, fill="x")
 
@@ -101,14 +102,14 @@ class AgridataProApp(ctk.CTk):
         self.lbl_selected = ctk.CTkLabel(self.main_panel, text="Aucun dataset sélectionné.", text_color="gray")
         self.lbl_selected.pack(pady=(0, 20))
 
-        # Bouton d'aperçu rapide (désactivé par défaut)
+        # Bouton d'aperçu rapide 
         self.btn_preview = ctk.CTkButton(self.main_panel, text="👁️ Aperçu rapide (5 lignes)", 
                                          font=ctk.CTkFont(size=14, weight="bold"), height=35,
                                          fg_color="#e67e22", hover_color="#d35400",
                                          state="disabled", command=self.start_preview)
         self.btn_preview.pack(pady=(0, 10))
 
-        # Bouton d'extraction individuelle (désactivé par défaut)
+        # Bouton d'extraction individuelle 
         self.btn_extract = ctk.CTkButton(self.main_panel, text="📥 Télécharger le Dataset sélectionné", 
                                          font=ctk.CTkFont(size=15, weight="bold"), height=40,
                                          state="disabled", command=self.start_extraction)
@@ -142,6 +143,10 @@ class AgridataProApp(ctk.CTk):
         self.log_box.see("end")
         self.log_box.configure(state="disabled")
 
+    def _update_progress(self, val):
+        """Met à jour la barre de progression (Thread-safe)."""
+        self.progress_bar.set(val)
+
     # ================= LOGIQUE DE RECHERCHE =================
     def start_search(self):
         query = self.search_entry.get().strip()
@@ -167,7 +172,8 @@ class AgridataProApp(ctk.CTk):
         params = {'q': query, 'rows': 50} 
 
         try:
-            response = requests.get(url, params=params, timeout=15)
+            # Timeout (10s max pour connecter, 20s max sans réponse)
+            response = requests.get(url, params=params, timeout=(10, 20))
             response.raise_for_status()
             data = response.json()
 
@@ -182,7 +188,6 @@ class AgridataProApp(ctk.CTk):
                         res_name = resource.get('name', 'Ressource')
                         res_id = resource.get('id')
                         
-                        # Stockage dans la liste pour le téléchargement en lot
                         self.current_search_results.append({
                             "title": dataset_title,
                             "res_name": res_name,
@@ -195,7 +200,6 @@ class AgridataProApp(ctk.CTk):
                 self.log("❌ Aucun dataset tabulaire trouvé pour ces critères.")
             else:
                 self.log(f"✅ {found_resources} ressource(s) exploitable(s) trouvée(s).")
-                # Activer le bouton de téléchargement en lot
                 self.after(0, lambda: self.btn_download_all.configure(state="normal", text=f"📥 Télécharger les {found_resources} fichiers"))
 
         except Exception as e:
@@ -229,7 +233,7 @@ class AgridataProApp(ctk.CTk):
 
         try:
             self.log(f"\n--- Récupération de l'aperçu... ---")
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=(10, 20))
             response.raise_for_status()
 
             records = response.json().get('result', {}).get('records', [])
@@ -268,7 +272,6 @@ class AgridataProApp(ctk.CTk):
         if not self.current_search_results:
             return
         
-        # Demander un dossier plutôt qu'un fichier
         directory = filedialog.askdirectory(title="Choisir le dossier de destination pour le téléchargement en lot")
         if not directory:
             return
@@ -277,14 +280,11 @@ class AgridataProApp(ctk.CTk):
         self.btn_extract.configure(state="disabled")
         self.progress_bar.set(0)
         
-        # Lancement du thread de masse
         threading.Thread(target=self._batch_extract_data, args=(directory,), daemon=True).start()
 
     def _sanitize_filename(self, filename):
-        """Nettoie le nom du fichier pour éviter les erreurs sous Windows/Linux."""
-        # Remplace les caractères interdits par un tiret
         clean = re.sub(r'[\\/*?:"<>|]', "-", filename)
-        return clean[:100] # Limite la longueur
+        return clean[:100] 
 
     def _batch_extract_data(self, directory):
         total_files = len(self.current_search_results)
@@ -297,19 +297,26 @@ class AgridataProApp(ctk.CTk):
             filepath = os.path.join(directory, safe_filename)
 
             self.log(f"\n[{index}/{total_files}] Traitement de : {safe_filename[:50]}...")
-            
-            # Mise à jour de la barre de progression globale
-            self.after(0, self.progress_bar.set, index / total_files)
+            self.after(0, self._update_progress, index / total_files)
 
-            # --- Utilisation du moteur d'extraction interne ---
-            df = self._core_extraction_engine(res_id)
+            time.sleep(2.5)
+
+            try:
+                df = self._core_extraction_engine(res_id, update_ui_progress=False)
+            except Exception as e:
+                self.log(f"   ↳ ❌ Crash fatal intercepté : {str(e)}. Passage au suivant.")
+                df = None
             
-            if df is not None and not df.empty:
+            if df is None:
+                self.log("   ↳ ⏭️ Fichier ignoré suite à une erreur réseau ou un blocage API. Passage au suivant.")
+                continue 
+
+            if not df.empty:
                 try:
                     df.to_csv(filepath, index=False, encoding='utf-8-sig')
                     self.log(f"   ↳ 💾 Sauvegardé ({len(df)} lignes).")
                 except Exception as e:
-                    self.log(f"   ↳ ❌ Erreur de sauvegarde : {str(e)}")
+                    self.log(f"   ↳ ❌ Erreur de sauvegarde locale : {str(e)}")
             else:
                 self.log("   ↳ ⚠️ Fichier vide ou filtré entièrement. Ignoré.")
 
@@ -319,62 +326,93 @@ class AgridataProApp(ctk.CTk):
 
     # ================= MOTEUR D'EXTRACTION CENTRAL (Individuel & Lot) =================
     def start_extraction(self):
-        """Extraction individuelle via le bouton standard."""
         if not self.selected_resource_id:
             return
         
         self.btn_extract.configure(state="disabled")
         self.progress_bar.set(0)
         
-        # Thread spécifique pour l'extraction individuelle
         def run_single():
             df = self._core_extraction_engine(self.selected_resource_id, update_ui_progress=True)
             if df is not None and not df.empty:
                 self.after(0, self._save_file_dialog, df)
             else:
-                self.log("⚠️ Opération annulée ou fichier vide.")
+                self.log("⚠️ Opération annulée, fichier vide ou erreur API.")
             self.after(0, lambda: self.btn_extract.configure(state="normal"))
             
         threading.Thread(target=run_single, daemon=True).start()
 
     def _core_extraction_engine(self, resource_id, update_ui_progress=False):
-        """Le moteur central qui télécharge et filtre les données (utilisé par Individuel et Lot)."""
         url = f"{self.api_base_url}/datastore_search"
-        limit = 1000
+        # [FIX] Réduction de la limite par lot pour soulager le serveur (de 1000 à 500)
+        limit = 500
         offset = 0
         all_records = []
 
         try:
-            res = requests.get(url, params={'resource_id': resource_id, 'limit': 0}, timeout=15)
-            res.raise_for_status()
-            total_records = res.json().get('result', {}).get('total', 0)
-            
-            if total_records == 0:
-                return None
-
-            while offset < total_records:
-                params = {'resource_id': resource_id, 'limit': limit, 'offset': offset}
-                batch_res = requests.get(url, params=params, timeout=15)
-                batch_res.raise_for_status()
+            with requests.Session() as session:
+                # [FIX] Tuple Timeout : (10s pour se connecter, 45s d'attente maximum sans recevoir de données)
+                res = session.get(url, params={'resource_id': resource_id, 'limit': 0}, timeout=(10, 45))
+                res.raise_for_status()
                 
-                batch = batch_res.json().get('result', {}).get('records', [])
-                if not batch: break
+                try:
+                    data = res.json()
+                except ValueError:
+                    self.log("   ↳ ❌ Erreur : Le serveur a renvoyé un format invalide (HTML).")
+                    return None
+
+                total_records = data.get('result', {}).get('total', 0)
+                
+                if total_records == 0:
+                    return None
+
+                while offset < total_records:
+                    params = {'resource_id': resource_id, 'limit': limit, 'offset': offset}
                     
-                all_records.extend(batch)
-                offset += limit
+                    # [FIX] Traceur visuel ajouté pour surveiller précisément là où ça bloque
+                    current_max = min(offset + limit, total_records)
+                    self.log(f"   ↳ ⏳ API Call : Récupération des lignes {offset} à {current_max}/{total_records}...")
 
-                if update_ui_progress:
-                    progress = min(len(all_records) / total_records, 1.0)
-                    self.after(0, self.progress_bar.set, progress)
+                    # [FIX] Timeout tuple renforcé ici aussi
+                    batch_res = session.get(url, params=params, timeout=(10, 45))
+                    batch_res.raise_for_status()
+                    
+                    try:
+                        batch_data = batch_res.json()
+                    except ValueError:
+                        self.log("   ↳ ❌ Erreur en cours de téléchargement (données corrompues). Arrêt propre.")
+                        break 
+                        
+                    batch = batch_data.get('result', {}).get('records', [])
+                    if not batch: break
+                        
+                    all_records.extend(batch)
+                    offset += limit
 
-            # --- TRANSFORMATION ET FILTRAGE LOCAL INTELLIGENT ---
+                    if update_ui_progress:
+                        progress = min(len(all_records) / total_records, 1.0)
+                        self.after(0, self._update_progress, progress)
+
+        except requests.exceptions.Timeout:
+            self.log(f"   ↳ ❌ Délai dépassé (Silent Hang du serveur intercepté !).")
+            return None
+        except requests.exceptions.RequestException as e:
+            self.log(f"   ↳ ❌ Erreur réseau/API : Fichier inaccessible.")
+            return None
+        except Exception as e:
+            self.log(f"   ↳ ❌ Erreur inattendue : {str(e)}")
+            return None 
+
+        if not all_records:
+            return None
+
+        # --- TRANSFORMATION ET FILTRAGE LOCAL INTELLIGENT ---
+        try:
             df = pd.DataFrame(all_records)
 
-            # 1. Suppression des lignes "fantômes"
             cols_to_check = [col for col in df.columns if col != '_id']
             df = df.dropna(subset=cols_to_check, how='all')
 
-            # 2. Filtrage par Gouvernorats (Forgiving Filter)
             selected_govs = [var.get() for var in self.gov_vars.values() if var.get()]
             if selected_govs:
                 pattern = '|'.join(selected_govs)
@@ -383,7 +421,6 @@ class AgridataProApp(ctk.CTk):
                 if not filtered_df.empty:
                     df = filtered_df
 
-            # 3. Filtrage par Années (Intelligent Column Detection)
             y_start = self.entry_year_start.get().strip()
             y_end = self.entry_year_end.get().strip()
             if y_start or y_end:
@@ -403,11 +440,10 @@ class AgridataProApp(ctk.CTk):
                             df = filtered_df
 
             return df
-
         except Exception as e:
-            self.log(f"   ↳ ❌ Erreur API/Réseau : {str(e)}")
+            self.log(f"   ↳ ❌ Erreur lors du nettoyage avec Pandas : {str(e)}")
             return None
-
+            
     def _save_file_dialog(self, df):
         """Dialogue de sauvegarde pour l'extraction individuelle."""
         filepath = filedialog.asksaveasfilename(
